@@ -1,5 +1,1 @@
-<<<<<<< HEAD
 file 1 - local edited 2nd time - locally
-=======
-file 1 - local edited 2nd time - online
->>>>>>> 00df3b6e3a082719a95f7db9e62924d38e3a8f26
