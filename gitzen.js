@@ -58,14 +58,7 @@ function getCurrentBranch() {
     return res.success ? res.output : 'main';
 }
 
-// 🌟 NEW: Detect if file is code (to prevent dangerous "Accept Both")
-function isCodeFile(filePath) {
-    const ext = path.extname(filePath).toLowerCase();
-    const codeExts = ['.js', '.ts', '.jsx', '.tsx', '.json', '.py', '.java', '.c', '.cpp', '.cs', '.go', '.rb', '.php', '.html', '.css', '.scss', '.yaml', '.yml', '.xml', '.sh', '.bat', '.vue', '.svelte'];
-    return codeExts.includes(ext);
-}
-
-// 🌟 NEW: Check if VS Code is available for the Merge Editor
+// 🌟 Check if VS Code is available for the Merge Editor
 function isVSCodeAvailable() {
     try { execSync('code --version', { stdio: 'ignore' }); return true; } catch { return false; }
 }
@@ -223,7 +216,6 @@ async function resolveFile(filePath) {
     const content = fs.readFileSync(filePath, 'utf8');
     const conflictRegex = /<<<<<<<[^\n]*\n([\s\S]*?)=======\n([\s\S]*?)>>>>>>>[^\n]*\n?/g;
     const match = conflictRegex.exec(content);
-    const isCode = isCodeFile(filePath);
     const hasVSCode = isVSCodeAvailable();
     
     // 🌟 Visual Display of the Conflict
@@ -239,14 +231,13 @@ async function resolveFile(filePath) {
         log(`${c.gray}──────────────────────────${c.reset}\n`);
     }
 
-    // 🌟 Context-Aware Choices
+    // 🌟 Strict Decision Choices (No blind auto-merging for ANY file type)
     const choices = [
         '🟢 Keep Mine (Accept your local changes)',
         '🔵 Keep GitHub (Accept incoming changes)'
     ];
     
-    if (!isCode) choices.push('🟣 Accept Both (Combine both changes)');
-    if (hasVSCode) choices.push('📝 Open VS Code Merge Editor (Recommended)');
+    if (hasVSCode) choices.push('📝 Open VS Code Merge Editor (Recommended for manual combination)');
     else choices.push('📝 Open in Default Editor');
     choices.push('🔙 Back to file list');
 
@@ -264,15 +255,9 @@ async function resolveFile(filePath) {
             runGit(`add "${filePath}"`, true);
             success(`Kept GitHub version!`); return;
         }
-        if (action === 2 && !isCode) { // Accept Both (Text files only)
-            const resolved = content.replace(conflictRegex, (m, ours, theirs) => ours + (ours.endsWith('\n') ? '' : '\n') + theirs);
-            fs.writeFileSync(filePath, resolved, 'utf8');
-            runGit(`add "${filePath}"`, true);
-            success(`Combined both versions!`); return;
-        }
         
         // Open Editor (VS Code or Fallback)
-        if ((action === 2 && isCode) || action === 3) {
+        if (action === 2) { 
             if (hasVSCode) {
                 info('Opening VS Code Merge Editor...');
                 log('Use the buttons in VS Code to resolve. Save when done.', c.gray);
